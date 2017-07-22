@@ -437,11 +437,11 @@ public:
 
 	/**
 	 * The text window cursor's position.
-	 * \var
-	 * \var
+	 * \var tx The text cursor's position (column)
+	 * \var ty The text cursor's position (row)
 	 */
 	int tx;
-	int ty;				// Text cursor
+	int ty;
 
 	/**
 	 * The text window cursor's position.

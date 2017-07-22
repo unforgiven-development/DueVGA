@@ -698,25 +698,25 @@ int Vga::beginNTSC() {
 
 	dmapri();
 
-	REG_PMC_PCER1		= 1 << 7;
-	REG_DMAC_WPMR		= DMAC_WPMR_WPKEY(0x444d4143);
-	REG_DMAC_EN			= 1;
-	REG_DMAC_GCFG		= 0x00;
-	REG_DMAC_SADDR5		= (uint32_t)dmabuf;
-	REG_DMAC_DADDR5		= (uint32_t)0x60000000;
-	REG_DMAC_DSCR5		= 0;
-	REG_DMAC_CTRLB5		= 0x20000000;
-	REG_DMAC_CFG5		= 0x10702200;
+	REG_PMC_PCER     = 1 << 7;
+	REG_DMAC_WPMR    = DMAC_WPMR_WPKEY(0x444d4143);
+	REG_DMAC_EN      = 1;
+	REG_DMAC_GCFG    = 0x00;
+	REG_DMAC_SADDR5  = (uint32_t)dmabuf;
+	REG_DMAC_DADDR5  = (uint32_t)0x60000000;
+	REG_DMAC_DSCR5   = 0;
+	REG_DMAC_CTRLB5  = 0x20000000;
+	REG_DMAC_CFG5    = 0x10702200;
 
-	REG_PMC_PCER0		= 1 << 9;
-	REG_PIOC_PDR		= 0b1111111100;
-	REG_PIOC_ABSR		&= ~0b1111111100;
-	REG_SMC_WPCR		= 0x534d4300;
-	REG_SMC_SETUP0		= 0x00000000;
-	REG_SMC_PULSE0		= 0X00000101;
-	REG_SMC_CYCLE0		= 6;
-	REG_SMC_TIMINGS0	= 0;
-	REG_SMC_MODE0		= 0x00000000;
+	REG_PMC_PCER0    = 1 << 9;
+	REG_PIOC_PDR     = 0b1111111100;
+	REG_PIOC_ABSR   &= ~0b1111111100;
+	REG_SMC_WPCR     = 0x534d4300;
+	REG_SMC_SETUP0   = 0x00000000;
+	REG_SMC_PULSE0   = 0X00000101;
+	REG_SMC_CYCLE0   = 6;
+	REG_SMC_TIMINGS0 = 0;
+	REG_SMC_MODE0    = 0x00000000;
 
 	startinterrupts();
 
@@ -727,30 +727,57 @@ int Vga::beginNTSC() {
 
 
 void Vga::end() {
-  if (!up) {
-	  return;
+	if (!up) {
+		return;
 	}
 
-  up = 0;
+	up = 0;
 
-  stopinterrupts();
+	stopinterrupts();
 
-  if (mode == VGA_MONO)stopmono();
+	if (mode == VGA_MONO) {
+		stopmono();
+	} else if (mode & VGA_COLOR) {
+		stopcolor();
+	}
 
-  else if (mode & VGA_COLOR)stopcolor();
+	stoptimers();
 
-  stoptimers();
-  pinMode(_v_hsync,INPUT);
-  pinMode(_v_vsync,INPUT);
+	pinMode(_v_hsync, INPUT);
+	pinMode(_v_vsync, INPUT);
 
-  freevideomem();
-  if((mode==VGA_NTSC) || (mode==VGA_PAL))free(dmabuf);
+	/* ---( Free video memory and other resources )--- */
+	freevideomem();
 
-  pclock=xsize=xsyncstart=xsyncend=xtotal=ysize=ysyncstart=ysyncend=ytotal=0;
-  mode=line=linedouble=synced=xclocks=xstart=xsyncwidth=xscale=yscale=0;
-  lfreq=ffreq=ltot=0;
+	if ((mode == VGA_NTSC) || (mode == VGA_PAL)) {
+		free(dmabuf);
+	}
 
-  return;
+	pclock     = 0;
+	xsize      = 0;
+	xsyncstart = 0;
+	xsyncend   = 0;
+	xtotal     = 0;
+	ysize      = 0;
+	ysyncstart = 0;
+	ysyncend   = 0;
+	ytotal     = 0;
+
+	mode       = 0;
+	line       = 0;
+	linedouble = 0;
+	synced     = 0;
+	xclocks    = 0;
+	xstart     = 0;
+	xsyncwidth = 0;
+	xscale     = 0;
+	yscale     = 0;
+
+	lfreq      = 0;
+	ffreq      = 0;
+	ltot       = 0;
+
+	return;
 }
 
 
