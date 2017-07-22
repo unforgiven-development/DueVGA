@@ -80,6 +80,7 @@ void Vga::moveCursor(int column, int line) {
 	}
 }
 
+
 void Vga::setPrintWindow(int left, int top, int width, int height) {
 	if (left < 0) {
 		left = 0;

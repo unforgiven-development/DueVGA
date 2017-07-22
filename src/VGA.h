@@ -172,79 +172,188 @@ public:
 
 
 	void clear(int c = 0);
+
+
 	void drawPixel(int x, int y, int col);
+
+
 	void drawLine(int x0, int y0, int x1, int y1, int col);
+
+
 	void drawLinex(int x0, int y0, int x1, int y1, int col);
+
+
 	void drawHLine(int y, int x0, int x1, int col);
+
+
 	void drawTri(int x0, int y0, int x1, int y1, int x2, int y2, int col);
+
+
 	void fillTri(int x0, int y0, int x1, int y1, int x2, int y2, int col);
+
+
 	void drawRect(int x0, int y0, int x1, int y1, int col);
+
+
 	void fillRect(int x0, int y0, int x1, int y1, int col);
+
+
 	void drawCircle(int x, int y, int r, int col);
+
+
 	void fillCircle(int x, int y, int r, int col);
+
+
 	void drawEllipse(int x0, int y0, int x1, int y1, int col);
+
+
 	void fillEllipse(int x0, int y0, int x1, int y1, int col);
 
 
 	void drawText(char *text, int x, int y, int fgcol, int bgcol = -256, int dir = 0);
+
+
 	void scroll(int x, int y, int w, int h, int dx, int dy, int col = 0);
 
 	void moveCursor(int column, int line);
+
+
 	void setPrintWindow(int left, int top, int width, int height);
+
+
 	void unsetPrintWindow() { tww = tw;twh = th;twx = twy = 0; }
+
+
 	void clearPrintWindow();
+
+
 	void scrollPrintWindow();
+
+
 	void setInk(int i) { ink = i; }
+
+
 	void setPaper(int p) { paper = p; }
+
+
 	virtual size_t write(const uint8_t *buffer, size_t size);
+
+
 	virtual size_t write(uint8_t c);
 
-  void waitBeam() { while((*(volatile int *)&line) < ysize); }
-  void waitSync() { while((*(volatile int *)&line) >= ysize);
-		  while((*(volatile int *)&line) < ysize); }
+	void waitBeam() {
+		while ((*(volatile int *)&line) < ysize);
+	}
+
+
+	void waitSync() {
+		while ((*(volatile int *)&line) >= ysize);
+		while ((*(volatile int *)&line) < ysize);
+	}
+
 
 	int up; // whether we are running or not
 
 	// modeline
 	int pclock; // must divide 84000000
+
+
 	int xsize;
+
+
 	int xsyncstart;
+
+
 	int xsyncend;
+
+
 	int xtotal;
+
+
 	int ysize;
+
+
 	int ysyncstart;
+
+
 	int ysyncend;
+
+
 	int ytotal;
+
+
 	bool vsyncpol;
+
+
 	bool hsyncpol;
 
 	//PAL
 	const uint16_t *cbt[2];
+
+
 	const uint16_t *crt[2];
+
+
 	uint16_t *dmabuf;
+
+
 	int phase;
+
+
 	int poff;
 
 	// various display parameters
 	int mode;
+
+
 	int line;
+
+
 	int linedouble;
+
+
 	int synced;
+
+
 	int framecount;
 
+
 	int xclocks;
+
+
 	int xstart;
+
+
 	int xsyncwidth;
+
+
 	int xscale;
+
+
 	int yscale;
+
+
 	int lfreq;
+
+
 	int ffreq;
+
+
 	int ltot;
+
+
 	int debug;
 
+
 	int lfreqmin;
+
+
 	int lfreqmax;
+
+
 	int ffreqmin;
+
+
 	int ffreqmax;
 
 
@@ -261,11 +370,19 @@ public:
 		vsyncpol = v;
 	}
 
+
 	uint16_t *pb;		// Pixel buffer memory address
+
+
 	int pw;				// Count of words from one line to the next (aka stride or pitch)
+
+
 	int pbsize;			// Total size of pixel buffer (note these sizes are 16-bit words)
 
+
 	uint32_t *pbb;		// Pixel buffer bit-banding alias address (read the datasheet p75)
+
+
 	int pbw;			// Pixel buffer bit-banding stride (in 32-bit words)
 
 	// To help understand usage of these, look at the following functions:
@@ -276,18 +393,26 @@ public:
 	}
 
 
+
 	int getPPixelFast(int x, int y) {
 		return pbb[y * pbw + (x ^ 15)];
 	}
 
+
 	uint8_t *cb;		// Color buffer memory address
+
+
 	int cw;				// Color buffer stride, in bytes
+
+
 	int cbsize;			// Size of color buffer in bytes
+
 
 
 	void putCPixelFast(int x, int y, int c) {
 		cb[y * cw + x] = c;
 	}
+
 
 
 	int getCPixelFast(int x, int y) {
