@@ -1,0 +1,26 @@
+#
+# .gitignore
+#
+
+# GENERAL #
+*~
+*.bak
+*.orig
+
+
+# BINARY OBJECT FILES & BUILD ARTIFACTS #
+*.o
+
+
+# EXECUTABLE & BINARY LIBRARIES #
+*.dll
+*.exe
+*.so
+*.so.*
+*.ko
+
+
+# PROJECT-SPECIFIC #
+docs/doxygen/
+out/
+cmake-build-*/

@@ -40,19 +40,19 @@ void ADC_Handler(){
    bufn=(bufn+1);if(bufn==5)bufn=0;
    ADC->ADC_RNPR=(uint32_t)buf[bufn];
    ADC->ADC_RNCR=128;
-  } 
+  }
 }
 
 void setup(){
 
-  VGA.begin(316,200,VGA_COLOUR);
+  VGA.begin(316,200,VGA_COLOR);
   VGA.fillRect(0,0,319,199,3);
-  
+
   pmc_enable_periph_clk(ID_ADC);
   adc_init(ADC, SystemCoreClock, ADC_FREQ_MAX, ADC_STARTUP_FAST);
-  
+
   ADC->ADC_MR |=0x3;
-  ADC->ADC_CHER=0x80;  
+  ADC->ADC_CHER=0x80;
   NVIC_EnableIRQ(ADC_IRQn);
   ADC->ADC_IDR=~(1<<27);
   ADC->ADC_IER=1<<27;
@@ -63,17 +63,17 @@ void setup(){
   bufn=obufn=1;
   ADC->ADC_PTCR=1;
   ADC->ADC_CR=2;
-  NVIC_SetPriority(ADC_IRQn,6); 
+  NVIC_SetPriority(ADC_IRQn,6);
 
-  
-  pinMode(2,OUTPUT);    // port B pin 25  
+
+  pinMode(2,OUTPUT);    // port B pin 25
   analogWrite(2,255);   // sets up some other registers I haven't worked out yet
   REG_PIOB_PDR = 1<<25; // disable PIO, enable peripheral
   REG_PIOB_ABSR= 1<<25; // select peripheral B
   REG_TC0_CMR0=0b00000000000010011100010000000000;
-  REG_TC0_RC0=42000000/samprate; 
-  REG_TC0_RA0=1; 
-  REG_TC0_CCR0=0b101;  
+  REG_TC0_RC0=42000000/samprate;
+  REG_TC0_RA0=1;
+  REG_TC0_CCR0=0b101;
 
   VGA.drawText("DueVGA Waterfall",96,4,255);
   VGA.drawLine(40,176,40,179,255);
@@ -81,7 +81,7 @@ void setup(){
   VGA.drawLine(159,176,159,179,255);
   VGA.drawLine(219,176,219,179,255);
   VGA.drawLine(279,176,279,179,255);
-  
+
   char s[10];
 
   sprintf(s,"%d",(samprate/2)/256);
@@ -95,7 +95,7 @@ void setup(){
   sprintf(s,"%d",(240*samprate/2)/256);
   VGA.drawText(s,264,181,255);
   VGA.drawText("Frequency (Hz)",104,190,255);
-  
+
   arm_rfft_init_q15(&S,&C,512,false,true);
 }
 
@@ -104,7 +104,7 @@ int nn=0;
 void loop(){
 
   while(obufn==bufn);
-  obufn=bufn;    
+  obufn=bufn;
 
   int bb=bufn+1;if(bb==5)bb=0;
   uint16_t *q=buf[0]+128*bb;
@@ -113,7 +113,7 @@ void loop(){
     if(q==(buf[0]+640))q=buf[0];
     out[j]=t<<4;
   }
-  
+
   arm_rfft_q15(&S,out,outsq);
   arm_cmplx_mag_squared_q15(outsq,out,256);
   for(int i=0;i<240;i++) {VGA.drawPixel(i+40,175,(cmap[out[1+(i)]&0xff]));}

@@ -1,0 +1,53 @@
+########################################################################################################################
+## keywords.txt
+## ------------
+## Provides highlighting of the DueVGA library's important keywords in the Arduino IDE
+########################################################################################################################
+
+
+########################################################################################################################
+## KEYWORD1
+########################################################################################################################
+VGA							KEYWORD1
+
+
+########################################################################################################################
+## KEYWORD2
+########################################################################################################################
+begin 						KEYWORD2
+end							KEYWORD2
+clear						KEYWORD2
+drawPixel					KEYWORD2
+drawLine					KEYWORD2
+drawHLine					KEYWORD2
+drawTri						KEYWORD2
+fillTri						KEYWORD2
+drawRect					KEYWORD2
+fillRect					KEYWORD2
+drawCircle					KEYWORD2
+fillCircle					KEYWORD2
+drawEllipse					KEYWORD2
+fillEllipse					KEYWORD2
+drawText					KEYWORD2
+scroll						KEYWORD2
+moveCursor					KEYWORD2
+setPrintWindow				KEYWORD2
+unsetPrintWindow			KEYWORD2
+clearPrintWindow			KEYWORD2
+scrollPrintWindow			KEYWORD2
+setInk						KEYWORD2
+setPaper					KEYWORD2
+write						KEYWORD2
+waitBeam					KEYWORD2
+waitSync					KEYWORD2
+
+
+########################################################################################################################
+## LITERAL1
+########################################################################################################################
+VGA_MONO					LITERAL1
+VGA_MONOCHROME				LITERAL1
+VGA_GRAYSCALE				LITERAL1
+VGA_COLOR					LITERAL1
+VGA_COLOR					LITERAL1
+VGA_RGB						LITERAL1
