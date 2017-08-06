@@ -5,6 +5,23 @@
  * Contains functions to draw a variety of graphical primatives to the display, which are able to be combined to produce
  * increasingly complex shapes/graphics.
  *
+ * \author		Gerad Munsch <gmunsch@unforgivendevelopment.com>
+ * \author		stimmer <stimmylove@gmail.com>
+ * \date		2013-2017
+ * \copyright	This library is free software; you can redistribute it and/or
+ *				modify it under the terms of the GNU Lesser General Public
+ *				License as published by the Free Software Foundation; either
+ *				version 2.1 of the License, or (at your option) any later version.
+ *
+ *				This library is distributed in the hope that it will be useful,
+ *				but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *				MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *				See the GNU Lesser General Public License for more details.
+ *
+ *				You should have received a copy of the GNU Lesser General Public
+ *				License along with this library; if not, write to the Free Software
+ *				Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ *
  */
 
 
@@ -13,13 +30,13 @@
 #include "VGA.h"
 
 void Vga::clear(int c) {
-	if (mode == VGA_MONO) {
-		/* ---( VGA -- monochrome mode )--- */
+	if (videoOutputMode == VGA_MONO) {
+		/* ---( VGA -- monochrome videoOutputMode )--- */
 		for (int y = 0; y < ysize; y++) {
 			memset(pb + y * pw, (c & 1) ? 0xFF : 0, xsize / 8);
 		}
-	} else if (mode & VGA_COLOR) {
-		/* ---( VGA -- color mode )--- */
+	} else if (videoOutputMode & VGA_COLOR) {
+		/* ---( VGA -- color videoOutputMode )--- */
 		memset(cb, c, cbsize);
 	}
 }
@@ -30,15 +47,15 @@ void Vga::drawPixel(int x, int y, int c) {
 		return;
 	}
 
-	if (mode == VGA_MONO) {
-		/* ---( VGA -- monochrome mode )--- */
+	if (videoOutputMode == VGA_MONO) {
+		/* ---( VGA -- monochrome videoOutputMode )--- */
 		if (c >= 0) {
 			pbb[y * pbw + (x ^ 15)] = c;
 		} else {
 			pbb[y * pbw + (x ^ 15)] ^= c;
 		}
-	} else if (mode & VGA_COLOR) {
-		/* ---( VGA -- color mode )--- */
+	} else if (videoOutputMode & VGA_COLOR) {
+		/* ---( VGA -- color videoOutputMode )--- */
 		if (c >= 0) {
 			cb[y * cw + x] = c;
 		} else {
@@ -111,22 +128,28 @@ void Vga::drawTri(int x0, int y0, int x1, int y1, int x2, int y2, int col) {
 }
 
 
-#define _V_P(x, y)    if (y > = 0 && y < ysize) {        \
-                        if (x < xmin[y]) {            \
-                            xmin[y] = x;            \
-                        }                            \
-                        if (x > xmax[y]) {            \
-                            xmax[y] = x;            \
-                        }                            \
-                    }
+#define _V_P(x, y)	if (y > = 0 && y < ysize) {		\
+						if (x < xmin[y]) {			\
+							xmin[y] = x;			\
+						}							\
+						if (x > xmax[y]) {			\
+							xmax[y] = x;			\
+						}							\
+					}
 
 
-void Vga::fillTri(int x0, int y0, int x1, int y1, int x2, int y2, int col) { //TODO - this can be done without needing an array
-	short xmin[ysize], xmax[ysize];
+void Vga::fillTri(int x0, int y0, int x1, int y1, int x2, int y2, int col) {
+	/**
+	 * \todo this can be done without needing an array
+	 */
+	short xmin[ysize];
+	short xmax[ysize];
+
 	for (int i = 0; i < ysize; i++) {
 		xmin[i] = xsize;
 		xmax[i] = -1;
 	}
+
 	int dx, dy, sx, sy, err, x3 = x0, y3 = y0;
 	dx = abs(x1 - x0);
 	dy = abs(y1 - y0);
@@ -348,7 +371,7 @@ void Vga::fillEllipse(int x0, int y0, int x1, int y1, int col) {                
 
 
 void Vga::scroll(int x, int y, int w, int h, int dx, int dy, int col) {
-	if (mode & VGA_COLOR) {
+	if (videoOutputMode & VGA_COLOR) {
 		if (dy <= 0) {
 			if (dx <= 0) {
 				for (int i = x; i < x + w + dx; i++) {
@@ -378,7 +401,7 @@ void Vga::scroll(int x, int y, int w, int h, int dx, int dy, int col) {
 				}
 			}
 		}
-	} else if (mode == VGA_MONO) {
+	} else if (videoOutputMode == VGA_MONO) {
 		if (dy <= 0) {
 			if (dx <= 0) {
 				for (int i = x; i < x + w + dx; i++) {

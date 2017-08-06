@@ -1,35 +1,33 @@
 /**
  * \file VGA.h
- * \brief Defines the functionality of the DueVGA Arduino library
+ * Defines the functionality of the DueVGA Arduino library
  *
  * \version		0.512.1
  *
  *
-
  *
  *
- * \todo		Implement support for drawing bitmap/pixmap graphics to the screen
- * \todo		Add additional fonts; particularly a \b larger font
- * \todo		Implement our own version of \c printf()
+ * \todo Implement support for drawing bitmap/pixmap graphics to the screen
+ * \todo Add additional fonts; particularly a \b larger font
+ * \todo Implement our own version of \c printf()
  *
  *
  * \author		Gerad Munsch <gmunsch@unforgivendevelopment.com>
  * \author		stimmer <stimmylove@gmail.com>
  * \date		2013-2017
- * \copyright	This library is free software; you can redistribute it and/or
- *				modify it under the terms of the GNU Lesser General Public
- *				License as published by the Free Software Foundation; either
- *				version 2.1 of the License, or (at your option) any later version.
  *
- *				This library is distributed in the hope that it will be useful,
- *				but WITHOUT ANY WARRANTY; without even the implied warranty of
- *				MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *				See the GNU Lesser General Public License for more details.
+ * \copyright \parblock
+ * This library is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General
+ * Public License as published by the Free Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
  *
- *				You should have received a copy of the GNU Lesser General Public
- *				License along with this library; if not, write to the Free Software
- *				Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ * This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
  *
+ * You should have received a copy of the GNU Lesser General Public License along with this library; if not, write to
+ * the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ * \endparblock
  */
 
 /**
@@ -77,8 +75,10 @@
  * \section briefcl Brief Changelog
  * For people who don't care about the details...
  *
- * \li \ref ver0dot512dot1 "Version 0.512.1" - The current \b WIP version (as of 2017-07-05); author: Gerad Munsch
- * \li \ref
+ * \li \ref ver0dot512dot1 "Version 0.512.1" - The current \b WIP version (as of 2017-07-05); \b author: Gerad Munsch
+ * \li \ref ver0dot404 "Version 0.404"  - Added \b NTSC and \b PAL composite video output, and fixed some timing issues.
+ *     (2013-04-04); \b author: stimmer
+ */
 
 // Arduino Due VGA Library by stimmer
 // v0.404 (4/4/2013)
@@ -89,9 +89,7 @@
 //
 
 
-/*
 
-*/
 
 
 #ifndef _VGA_H__
@@ -102,17 +100,39 @@
 #include "Print.h"
 
 
-#define VGA_MONO 1
-#define VGA_MONOCHROME VGA_MONO
-#define VGA_GRAYSCALE VGA_MONO
+//#define VGA_MONO 1
+//#define VGA_MONOCHROME VGA_MONO
+//#define VGA_GRAYSCALE VGA_MONO
 
-#define VGA_COLOR 2
-#define VGA_COLOR VGA_COLOR
-#define VGA_RGB VGA_COLOR
+//#define VGA_COLOR 2
+//#define VGA_COLOUR VGA_COLOR
+//#define VGA_RGB VGA_COLOR
 
-#define VGA_NTSC 18
+//#define VGA_NTSC 18
 
-#define VGA_PAL 34
+//#define VGA_PAL 34
+
+
+/**
+ * Provides an enumerated type defining the various video output modes which are supported by \b DueVGA
+ *
+ * \brief Enum defining video output modes
+ */
+typedef enum {
+	VGA_MONO		= 1,	/*!< Defines \b VGA output in \b MONOCHROME mode */
+	VGA_MONOCHROME	= 1,	/*!< Defines \b VGA output in \b MONOCHROME mode */
+	VGA_GRAYSCALE	= 1,	/*!< Defines \b VGA output in \b MONOCHROME mode */
+	VGA_COLOR		= 2,	/*!< Defines \b VGA output in \b COLOR mode */
+	VGA_COLOUR		= 2,	/*!< Defines \b VGA output in \b COLOR mode */
+	VGA_RGB			= 2,	/*!< Defines \b VGA output in \b COLOR mode */
+	VGA_NTSC		= 18,	/*!< Defines \b NTSC composite video output */
+	TV_NTSC			= 18,	/*!< Defines \b NTSC composite video output */
+	COMPOSITE_NTSC	= 18,	/*!< Defines \b NTSC composite video output */
+	VGA_PAL			= 34,	/*!< Defines \b PAL composite video output */
+	TV_PAL			= 34,	/*!< Defines \b PAL composite video output */
+	COMPOSITE_PAL	= 34,	/*!< Defines \b PAL composite video output */
+	NO_VIDEO_OUT	= 0		/*!< Defines that there is \b no video output */
+} video_output_mode_t;
 
 
 extern unsigned char _vga_font8x8 [];
@@ -131,7 +151,13 @@ inline void _v_digitalWriteDirect(int pin, boolean val) {
 }
 
 
-
+/**
+ * \class Vga
+ * This class provides the implementation of the display driver for the Arduino Due hardware. There are a variety of
+ * output methods available.
+ *
+ * \brief Implements the display driver for the Arduino Due
+ */
 class Vga : public Print {
 
 public:
@@ -144,9 +170,9 @@ public:
 	 *
 	 * \param[in]	x	Sets the VGA \p x resolution (width) in pixels.
 	 * \param[in]	y	Sets the VGA \p y resolution (height) in pixels.
-	 * \param[in]	m	\b OPTIONAL - Sets the VGA color mode: \p VGA_MONO (the default), or \p VGA_COLOR
+	 * \param[in]	m	\b OPTIONAL - Sets the VGA output mode: \p VGA_MONO (the default), or \p VGA_COLOR
 	 */
-	int begin(int x, int y, int m = VGA_MONO);
+	int begin(int x, int y, video_output_mode_t m = VGA_MONO);
 
 	/**
 	 * Starts the \b DueVGA driver, in \b PAL output mode.
@@ -215,13 +241,19 @@ public:
 
 	void scroll(int x, int y, int w, int h, int dx, int dy, int col = 0);
 
+
 	void moveCursor(int column, int line);
 
 
 	void setPrintWindow(int left, int top, int width, int height);
 
 
-	void unsetPrintWindow() { tww = tw;twh = th;twx = twy = 0; }
+	void unsetPrintWindow() {
+		tww = tw;
+		twh = th;
+		twx = 0;
+		twy = 0;
+	}
 
 
 	void clearPrintWindow();
@@ -230,16 +262,21 @@ public:
 	void scrollPrintWindow();
 
 
-	void setInk(int i) { ink = i; }
+	void setInk(int i) {
+		ink = i;
+	}
 
 
-	void setPaper(int p) { paper = p; }
+	void setPaper(int p) {
+		paper = p;
+	}
 
 
 	virtual size_t write(const uint8_t *buffer, size_t size);
 
 
 	virtual size_t write(uint8_t c);
+
 
 	void waitBeam() {
 		while ((*(volatile int *)&line) < ysize);
@@ -252,7 +289,7 @@ public:
 	}
 
 
-	int up; // whether we are running or not
+
 
 	// modeline
 	int pclock; // must divide 84000000
@@ -303,7 +340,6 @@ public:
 	int poff;
 
 	// various display parameters
-	int mode;
 
 
 	int line;
@@ -371,18 +407,41 @@ public:
 	}
 
 
-	uint16_t *pb;		// Pixel buffer memory address
+	/**
+	 * \name VGAMonoPixelData
+	 * Variables and methods which are used by the \p VGA_MONO video output mode
+	 */
 
+	/**
+	 * @{
+	 */
 
-	int pw;				// Count of words from one line to the next (aka stride or pitch)
+	/**
+	 * A pointer to the pixel buffer's memory address. The pixel buffer is comprised of an array of 16-bit unsigned
+	 * integer values, the size of which will be stored in \p pbsize
+	 *
+	 * \brief Pixel buffer memory address
+	 */
+	uint16_t *pb;
 
+	/**
+	 * The amount of \e words (16-bit values) per output line.
+	 * \note An extra 2 words are added as \e spare words, which are used for blanking. The data stored in these 2 extra
+	 *       words \b must always be \b 0x0000
+	 *
+	 *  \brief Qty of \e words per line
+	 */
+	int pw;
 
-	int pbsize;			// Total size of pixel buffer (note these sizes are 16-bit words)
-
+	/**
+	 * The size of the pixel buffer.
+	 * \note The sizes are 16-bit words.
+	 *
+	 * \brief Total size of pixel buffer
+	 */
+	int pbsize;
 
 	uint32_t *pbb;		// Pixel buffer bit-banding alias address (read the datasheet p75)
-
-
 	int pbw;			// Pixel buffer bit-banding stride (in 32-bit words)
 
 	// To help understand usage of these, look at the following functions:
@@ -397,6 +456,21 @@ public:
 	int getPPixelFast(int x, int y) {
 		return pbb[y * pbw + (x ^ 15)];
 	}
+
+
+	/**
+	 * @}
+	 */
+
+
+	/**
+	 * \name VGAColorPixelData
+	 * Variables and methods which are used by the \p VGA_COLOR video output mode
+	 */
+
+	/**
+	 * @{
+	 */
 
 
 	uint8_t *cb;		// Color buffer memory address
@@ -419,6 +493,9 @@ public:
 		return cb[y * cw + x];
 	}
 
+	/**
+	 * @}
+	 */
 
 	/**
 	 * \defgroup textwindows Text Windows
@@ -435,59 +512,43 @@ public:
 	 * @{
 	 */
 
-	/**
-	 * The text window cursor's position.
-	 * \var tx The text cursor's position (column)
-	 * \var ty The text cursor's position (row)
-	 */
-	int tx;
-	int ty;
+	int tx;				/*! The text cursor's position (X-axis / "column") */
+	int ty;				/*! The text cursor's position (Y-axis / "row") */
+
+	int tw;				/*! Text width (X-axis / "columns") */
+	int th;				/*! Text height (Y-axis / "rows") */
+
+	int twx;			/*! The text window's position (X-axis / left edge of window) */
+	int twy;			/*! The text window's position (Y-axis / top edge of window) */
+	int tww;			/*! The text window's width in columns (1 column = 8 pixels) */
+	int twh;			/*! The text window's height in rows (1 row = 8 pixels) */
+
+	int ink;			/*! The color of the text within the text window */
+	int paper;			/*! The color of the background of the text window */
 
 	/**
-	 * The text window cursor's position.
-	 * \var
-	 * \var
-	 */
-	int tw;
-	int th;				// Text width / height
-
-	/**
-	 * The text window cursor's position.
-	 * \var
-	 * \var
-	 * \var
-	 * \var
-	 */
-	int twx;
-	int twy;
-	int tww;
-	int twh;			// Text window
-
-	/**
-	 * The text window cursor's position.
-	 * \var
-	 * \var
-	 */
-	int ink;
-	int paper;			// Text colors
-
-	/**
+	 * @}
 	*/
 
 
 private:
+
+	static uint8_t _isDriverRunning;		/*! The state of the driver; whether we are running or not */
+	static video_output_mode_t videoOutputMode;				/*! The current video output mode. */
+
+
 	int calcmodeline();
 	int allocvideomem();
 	void freevideomem();
 	void startinterrupts();
 	void stopinterrupts();
-	void starttimers();
-	void stoptimers();
-	void startmono();
-	void stopmono();
-	void startcolor();
-	void stopcolor();
-	void dmapri();
+	void startTimers();
+	void stopTimers();
+	void startVgaOutputMono();
+	void stopVgaOutputMono();
+	void startVgaOutputColor();
+	void stopVgaOutputColor();
+	void reconfigureDmaPriority();
 
 };
 
