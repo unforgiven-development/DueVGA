@@ -1,61 +1,65 @@
 /**
  * \file graphics.cpp
- * \brief Contains functions for drawing graphics to the display.
- *
  * Contains functions to draw a variety of graphical primatives to the display, which are able to be combined to produce
  * increasingly complex shapes/graphics.
+ *
+ * \brief Contains functions for drawing graphics to the display.
  *
  * \author		Gerad Munsch <gmunsch@unforgivendevelopment.com>
  * \author		stimmer <stimmylove@gmail.com>
  * \date		2013-2017
- * \copyright	This library is free software; you can redistribute it and/or
- *				modify it under the terms of the GNU Lesser General Public
- *				License as published by the Free Software Foundation; either
- *				version 2.1 of the License, or (at your option) any later version.
  *
- *				This library is distributed in the hope that it will be useful,
- *				but WITHOUT ANY WARRANTY; without even the implied warranty of
- *				MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *				See the GNU Lesser General Public License for more details.
+ * \copyright \parblock
+ * This library is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General
+ * Public License as published by the Free Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
  *
- *				You should have received a copy of the GNU Lesser General Public
- *				License along with this library; if not, write to the Free Software
- *				Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ * This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
  *
+ * You should have received a copy of the GNU Lesser General Public License along with this library;
+ * if not, write to the
+ *   Free Software Foundation, Inc.
+ *   51 Franklin St
+ *   Fifth Floor
+ *   Boston, MA 02110-1301
+ *   USA
+ * \endparblock
  */
 
 
+#include "DueVideoOut.h"
 
 
-#include "VGA.h"
 
-void Vga::clear(int c) {
-	if (videoOutputMode == VGA_MONO) {
-		/* ---( VGA -- monochrome videoOutputMode )--- */
-		for (int y = 0; y < ysize; y++) {
-			memset(pb + y * pw, (c & 1) ? 0xFF : 0, xsize / 8);
+void DueVideoOut::clear(int c) {
+	if (_currentVideoOutputMode == VGA_MONO) {
+		/* ---( VGA -- monochrome output mode )--- */
+		for (int y = 0; y < _displayResolutionY; y++) {
+			memset(monoPixelBufPtr + y * monoPixelWordsPerLine, (c & 1) ? 0xFF : 0, _displayResoultionX / 8);
 		}
-	} else if (videoOutputMode & VGA_COLOR) {
-		/* ---( VGA -- color videoOutputMode )--- */
+	} else if (_currentVideoOutputMode & VGA_COLOR) {
+		/* ---( VGA -- color output mode )--- */
 		memset(cb, c, cbsize);
 	}
 }
 
 
-void Vga::drawPixel(int x, int y, int c) {
-	if ((x < 0) || (x >= xsize) || (y < 0) || (y >= ysize)) {
+void DueVideoOut::drawPixel(int x, int y, int c) {
+	if ((x < 0) || (x >= _displayResoultionX) || (y < 0) || (y >= _displayResolutionY)) {
 		return;
 	}
 
-	if (videoOutputMode == VGA_MONO) {
-		/* ---( VGA -- monochrome videoOutputMode )--- */
+	if (_currentVideoOutputMode == VGA_MONO) {
+		/* ---( VGA -- monochrome output mode )--- */
 		if (c >= 0) {
-			pbb[y * pbw + (x ^ 15)] = c;
+			monoPixelBufferBitBandingAliasAddrPtr[y * monoPixelBufferBitBandingStride + (x ^ 15)] = c;
 		} else {
-			pbb[y * pbw + (x ^ 15)] ^= c;
+			monoPixelBufferBitBandingAliasAddrPtr[y * monoPixelBufferBitBandingStride + (x ^ 15)] ^= c;
 		}
-	} else if (videoOutputMode & VGA_COLOR) {
-		/* ---( VGA -- color videoOutputMode )--- */
+	} else if (_currentVideoOutputMode & VGA_COLOR) {
+		/* ---( VGA -- color output mode )--- */
 		if (c >= 0) {
 			cb[y * cw + x] = c;
 		} else {
@@ -70,7 +74,7 @@ template<typename T> int _v_sgn(T val) {
 }
 
 
-void Vga::drawLine(int x0, int y0, int x1, int y1, int c) {
+void DueVideoOut::drawLine(int x0, int y0, int x1, int y1, int c) {
 	int dx = abs(x1 - x0), dy = abs(y1 - y0), sx = _v_sgn(x1 - x0), sy = _v_sgn(y1 - y0);
 	int err = dx - dy;
 	if ((x0 != x1) || (y0 != y1)) {
@@ -91,14 +95,14 @@ void Vga::drawLine(int x0, int y0, int x1, int y1, int c) {
 }
 
 
-void Vga::drawHLine(int y, int x0, int x1, int col) {
+void DueVideoOut::drawHLine(int y, int x0, int x1, int col) {
 	for (int i = x0; i <= x1; i++) {
 		drawPixel(i, y, col);
 	}
 }
 
 
-void Vga::drawLinex(int x0, int y0, int x1, int y1, int c) { // Draw line, missing the last point
+void DueVideoOut::drawLinex(int x0, int y0, int x1, int y1, int c) { // Draw line, missing the last point
 	int dx = abs(x1 - x0);
 	int dy = abs(y1 - y0);
 	int sx = _v_sgn(x1 - x0);
@@ -121,14 +125,14 @@ void Vga::drawLinex(int x0, int y0, int x1, int y1, int c) { // Draw line, missi
 }
 
 
-void Vga::drawTri(int x0, int y0, int x1, int y1, int x2, int y2, int col) {
+void DueVideoOut::drawTri(int x0, int y0, int x1, int y1, int x2, int y2, int col) {
 	drawLine(x0, y0, x1, y1, col);
 	drawLine(x1, y1, x2, y2, col);
 	drawLine(x2, y2, x0, y0, col);
 }
 
 
-#define _V_P(x, y)	if (y > = 0 && y < ysize) {		\
+#define _V_P(x, y)	if (y > = 0 && y < _displayResolutionY) {		\
 						if (x < xmin[y]) {			\
 							xmin[y] = x;			\
 						}							\
@@ -138,15 +142,15 @@ void Vga::drawTri(int x0, int y0, int x1, int y1, int x2, int y2, int col) {
 					}
 
 
-void Vga::fillTri(int x0, int y0, int x1, int y1, int x2, int y2, int col) {
+void DueVideoOut::fillTri(int x0, int y0, int x1, int y1, int x2, int y2, int col) {
 	/**
 	 * \todo this can be done without needing an array
 	 */
-	short xmin[ysize];
-	short xmax[ysize];
+	short xmin[_displayResolutionY];
+	short xmax[_displayResolutionY];
 
-	for (int i = 0; i < ysize; i++) {
-		xmin[i] = xsize;
+	for (int i = 0; i < _displayResolutionY; i++) {
+		xmin[i] = _displayResoultionX;
 		xmax[i] = -1;
 	}
 
@@ -202,7 +206,7 @@ void Vga::fillTri(int x0, int y0, int x1, int y1, int x2, int y2, int col) {
 			y2 += sy;
 		}
 	}
-	for (int i = 0; i < ysize; i++) {
+	for (int i = 0; i < _displayResolutionY; i++) {
 		if (xmin[i] <= xmax[i]) {
 			drawHLine(i, xmin[i], xmax[i], col);
 		}
@@ -210,7 +214,7 @@ void Vga::fillTri(int x0, int y0, int x1, int y1, int x2, int y2, int col) {
 }
 
 
-void Vga::drawRect(int x0, int y0, int x1, int y1, int col) {
+void DueVideoOut::drawRect(int x0, int y0, int x1, int y1, int col) {
 	drawLinex(x0, y0, x0, y1, col);
 	drawLinex(x0, y1, x1, y1, col);
 	drawLinex(x1, y1, x1, y0, col);
@@ -218,9 +222,9 @@ void Vga::drawRect(int x0, int y0, int x1, int y1, int col) {
 }
 
 
-void Vga::fillRect(int x0, int y0, int x1, int y1, int col) {
-	int xa = min(min(xsize - 1, x0), x1), xb = max(max(0, x0), x1);
-	for (int y = min(min(ysize - 1, y0), y1); y <= max(max(0, y0), y1); y++) {
+void DueVideoOut::fillRect(int x0, int y0, int x1, int y1, int col) {
+	int xa = min(min(_displayResoultionX - 1, x0), x1), xb = max(max(0, x0), x1);
+	for (int y = min(min(_displayResolutionY - 1, y0), y1); y <= max(max(0, y0), y1); y++) {
 		drawHLine(y, xa, xb, col);
 	}
 }
@@ -229,7 +233,7 @@ void Vga::fillRect(int x0, int y0, int x1, int y1, int col) {
 // These circle and ellipse functions taken from
 // http://members.chello.at/~easyfilter/bresenham.html
 // by Zingl Alois
-void Vga::drawCircle(int xm, int ym, int r, int col) {
+void DueVideoOut::drawCircle(int xm, int ym, int r, int col) {
 	int x = -r, y = 0, err = 2 - 2 * r;                /* bottom left to top right */
 	do {
 		drawPixel(xm - x, ym + y, col);                        /*   I. Quadrant +x +y */
@@ -246,26 +250,39 @@ void Vga::drawCircle(int xm, int ym, int r, int col) {
 }
 
 
-void Vga::fillCircle(int xm, int ym, int r, int col) {
-	short xmin[ysize], xmax[ysize];
-	for (int i = 0; i < ysize; i++) {
-		xmin[i] = xsize;
+void DueVideoOut::fillCircle(int xm, int ym, int r, int col) {
+	short xmin[_displayResolutionY];
+	short xmax[_displayResolutionY];
+
+	for (int i = 0; i < _displayResolutionY; i++) {
+		xmin[i] = _displayResoultionX;
 		xmax[i] = -1;
 	}
-	int x = -r, y = 0, err = 2 - 2 * r;                /* bottom left to top right */
+
+	/* Bottom left to top right */
+	int x = -r;
+	int y = 0;
+	int err = 2 - 2 * r;
+
 	do {
-		_V_P(xm - x, ym + y);                        /*   I. Quadrant +x +y */
-		_V_P(xm - y, ym - x);                        /*  II. Quadrant -x +y */
-		_V_P(xm + x, ym - y);                        /* III. Quadrant -x -y */
-		_V_P(xm + y, ym + x);                        /*  IV. Quadrant +x -y */
+		_V_P(xm - x, ym + y);						/*   I. Quadrant +x +y */
+		_V_P(xm - y, ym - x);						/*  II. Quadrant -x +y */
+		_V_P(xm + x, ym - y);						/* III. Quadrant -x -y */
+		_V_P(xm + y, ym + x);						/*  IV. Quadrant +x -y */
 		r = err;
+
+		/* e_xy + e_y < 0 */
 		if (r <= y) {
 			err += ++y * 2 + 1;
-		}                             /* e_xy+e_y < 0 */
-		if (r > x || err > y)                  /* e_xy+e_x > 0 or no 2nd y-step */
-			err += ++x * 2 + 1;                                     /* -> x-step now */
+		}
+
+		/* e_xy + e_x > 0 or no 2nd Y-step */
+		if (r > x || err > y) {
+			err += ++x * 2 + 1;						/* -> x-step now */
+		}
 	} while (x < 0);
-	for (int i = 0; i < ysize; i++) {
+
+	for (int i = 0; i < _displayResolutionY; i++) {
 		if (xmin[i] <= xmax[i]) {
 			drawHLine(i, xmin[i], xmax[i], col);
 		}
@@ -273,7 +290,7 @@ void Vga::fillCircle(int xm, int ym, int r, int col) {
 }
 
 
-void Vga::drawEllipse(int x0, int y0, int x1, int y1, int col) {                              /* rectangular parameter enclosing the ellipse */
+void DueVideoOut::drawEllipse(int x0, int y0, int x1, int y1, int col) {                              /* rectangular parameter enclosing the ellipse */
 	long a = abs(x1 - x0), b = abs(y1 - y0), b1 = b & 1;                 /* diameter */
 	double dx = 4 * (1.0 - a) * b * b, dy = 4 * (b1 + 1) * a * a;           /* error increment */
 	double err = dx + dy + b1 * a * a, e2;                          /* error of 1.step */
@@ -317,61 +334,87 @@ void Vga::drawEllipse(int x0, int y0, int x1, int y1, int col) {                
 }
 
 
-void Vga::fillEllipse(int x0, int y0, int x1, int y1, int col) {                              /* rectangular parameter enclosing the ellipse */
-	long a = abs(x1 - x0), b = abs(y1 - y0), b1 = b & 1;                 /* diameter */
-	double dx = 4 * (1.0 - a) * b * b, dy = 4 * (b1 + 1) * a * a;           /* error increment */
-	double err = dx + dy + b1 * a * a, e2;                          /* error of 1.step */
-	short xmin[ysize], xmax[ysize];
-	for (int i = 0; i < ysize; i++) {
-		xmin[i] = xsize;
+void DueVideoOut::fillEllipse(int x0, int y0, int x1, int y1, int col) {                              /* rectangular parameter enclosing the ellipse */
+	/* Ellipse dimensions ("diameter") */
+	long a = abs(x1 - x0);
+	long b = abs(y1 - y0);
+	long b1 = b & 1;
+
+	/* Error increment */
+	double dx = 4 * (1.0 - a) * b * b;
+	double dy = 4 * (b1 + 1) * a * a;
+
+	/* Error of 1 step */
+	double err = dx + dy + b1 * a * a;
+	double e2;
+
+	short xmin[_displayResolutionY];
+	short xmax[_displayResolutionY];
+
+
+	for (int i = 0; i < _displayResolutionY; i++) {
+		xmin[i] = _displayResoultionX;
 		xmax[i] = -1;
 	}
 
+	/* if called with swapped points... */
 	if (x0 > x1) {
 		x0 = x1;
 		x1 += a;
-	}        /* if called with swapped points */
+	}
+
+	/* ...then exchange them */
 	if (y0 > y1) {
 		y0 = y1;
-	}                                  /* .. exchange them */
+	}
+
+
 	y0 += (b + 1) / 2;
 	y1 = y0 - b1;                               /* starting pixel */
 	a = 8 * a * a;
 	b1 = 8 * b * b;
 
+
 	do {
-		_V_P(x1, y0);                                  /*   I. Quadrant */
-		_V_P(x0, y0);                                  /*  II. Quadrant */
-		_V_P(x0, y1);                                  /* III. Quadrant */
-		_V_P(x1, y1);                                  /*  IV. Quadrant */
+		_V_P(x1, y0);						/*   I. Quadrant */
+		_V_P(x0, y0);						/*  II. Quadrant */
+		_V_P(x0, y1);						/* III. Quadrant */
+		_V_P(x1, y1);						/*  IV. Quadrant */
 		e2 = 2 * err;
+
+		/* Y step */
 		if (e2 <= dy) {
 			y0++;
 			y1--;
 			err += dy += a;
-		}                 /* y step */
+		}
+
+		/* X step */
 		if (e2 >= dx || 2 * err > dy) {
 			x0++;
 			x1--;
 			err += dx += b1;
-		}  /* x step */
+		}
 	} while (x0 <= x1);
 
-	while (y0 - y1 <= b) {                /* too early stop of flat ellipses a=1 */
-		_V_P(x0 - 1, y0);                    /* -> finish tip of ellipse */
+	/* Too early stop of flat ellipses (a = 1) */
+	while (y0 - y1 <= b) {
+		_V_P(x0 - 1, y0);					/* -> finish tip of ellipse */
 		_V_P(x1 + 1, y0++);
 		_V_P(x0 - 1, y1);
 		_V_P(x1 + 1, y1--);
 	}
 
-	for (int i = 0; i < ysize; i++)
-		if (xmin[i] <= xmax[i])
+	for (int i = 0; i < _displayResolutionY; i++) {
+		if (xmin[i] <= xmax[i]) {
 			drawHLine(i, xmin[i], xmax[i], col);
+		}
+	}
 }
 
 
-void Vga::scroll(int x, int y, int w, int h, int dx, int dy, int col) {
-	if (videoOutputMode & VGA_COLOR) {
+void DueVideoOut::scroll(int x, int y, int w, int h, int dx, int dy, int col) {
+	if (_currentVideoOutputMode & VGA_COLOR) {
 		if (dy <= 0) {
 			if (dx <= 0) {
 				for (int i = x; i < x + w + dx; i++) {
@@ -401,7 +444,7 @@ void Vga::scroll(int x, int y, int w, int h, int dx, int dy, int col) {
 				}
 			}
 		}
-	} else if (videoOutputMode == VGA_MONO) {
+	} else if (_currentVideoOutputMode == VGA_MONO) {
 		if (dy <= 0) {
 			if (dx <= 0) {
 				for (int i = x; i < x + w + dx; i++) {

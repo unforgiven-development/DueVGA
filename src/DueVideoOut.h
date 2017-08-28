@@ -4,9 +4,6 @@
  *
  * \version		0.512.1
  *
- *
- *
- *
  * \todo Implement support for drawing bitmap/pixmap graphics to the screen
  * \todo Add additional fonts; particularly a \b larger font
  * \todo Implement our own version of \c printf()
@@ -25,8 +22,13 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  *
- * You should have received a copy of the GNU Lesser General Public License along with this library; if not, write to
- * the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ * You should have received a copy of the GNU Lesser General Public License along with this library;
+ * if not, write to the
+ *   Free Software Foundation, Inc.
+ *   51 Franklin St
+ *   Fifth Floor
+ *   Boston, MA 02110-1301
+ *   USA
  * \endparblock
  */
 
@@ -138,10 +140,20 @@ typedef enum {
 extern unsigned char _vga_font8x8 [];
 
 
-const int _v_vsync = 42;
-const int _v_hsync = 43;
+const int _video_output_vsync_pin = 42;		/*! Defines the pin number used for the video output \b VSYNC signal */
+const int _video_output_hsync_pin = 43;		/*! Defines the pin number used for the video output \b HSYNC signal */
 
-
+/**
+ * This function provides an optimized, highly-efficient method to toggle the state of a GPIO in \e OUTPUT mode, via the
+ * use of an \b inline function, that writes the desired state directly to the port's register.
+ *
+ * \brief An optimized routine for toggling the state of a digital \e OUTPUT pin
+ *
+ * \param[in]	pin	The pin number on which to act
+ * \param[in]	val	The desired state of the pin:\n
+ *					\li \b 0 or \b false - turn the output off (ie: to the \e LOW state)
+ *					\li \b 1 or \b true - turn the output on (ie: to the \e HIGH state)
+ */
 inline void _v_digitalWriteDirect(int pin, boolean val) {
 	if (val) {
 		g_APinDescription[pin].pPort -> PIO_SODR = g_APinDescription[pin].ulPin;
@@ -158,28 +170,36 @@ inline void _v_digitalWriteDirect(int pin, boolean val) {
  *
  * \brief Implements the display driver for the Arduino Due
  */
-class Vga : public Print {
-
+class DueVideoOut : public Print {
 public:
 	/**
-	 * Starts the \b DueVGA driver, in \b VGA mode. If a color mode isn't included as a parameter, the driver will start
-	 * in \p VGA_MONO mode by default.
+	 * Starts the \b DueVGA driver, in \b VGA mode. If one of the color modes (ie: the \p VGA_COLOR enumerated value) is
+	 * not included as a parameter, the driver will start in \p VGA_MONO mode by default.
 	 *
-	 * \note The maxiumum resolution for \p VGA_MONO mode is 800x600; and for \p VGA_COLOR mode, 320x240
+	 * \brief Starts the video output driver in VGA mode, in either mono or color mode
+	 *
+	 * \note The maxiumum \e practical resolution for \p VGA_MONO mode is 800x600; for \p VGA_COLOR mode, 320x240
+	 * \warning The absolute \b maximum Y-resolution in \p VGA_COLOR mode is 380; anything greater will fail.
 	 * \todo Add a page about the VGA output, its limitations, etc..; create a link to said page.
 	 *
-	 * \param[in]	x	Sets the VGA \p x resolution (width) in pixels.
-	 * \param[in]	y	Sets the VGA \p y resolution (height) in pixels.
-	 * \param[in]	m	\b OPTIONAL - Sets the VGA output mode: \p VGA_MONO (the default), or \p VGA_COLOR
+	 * \todo Provide a unified \c begin() function
+	 *
+	 * \param[in]	targetResX		Sets the desired target VGA \b X resolution (width) in pixels.
+	 * \param[in]	targetResY		Sets the desired target VGA \b Y resolution (height) in pixels.
+	 * \param[in]	targetVideoMode	\b OPTIONAL -- Sets the VGA output mode:\n
+	 *								\li \p VGA_MONO (\e default)
+	 *								\li \p VGA_COLOR
 	 */
-	int begin(int x, int y, video_output_mode_t m = VGA_MONO);
+	int begin(int targetResX, int targetResY, video_output_mode_t targetVideoMode = VGA_MONO);
 
 	/**
 	 * Starts the \b DueVGA driver, in \b PAL output mode.
 	 *
 	 * \brief Start video output in PAL mode
 	 *
-	 * \note PAL output has a maximum resolution of 320x240
+	 * \note PAL output has a preset (non-configurable) resolution of 320x240
+	 *
+	 * \todo Provide a unified \c begin() function
 	 */
 	int beginPAL();
 
@@ -188,7 +208,9 @@ public:
 	 *
 	 * \brief Start video output in NTSC mode
 	 *
-	 * \note NTSC output has a maximum resolution of 320x200
+	 * \note NTSC output has a preset (non-configurable) resolution of 320x200
+	 *
+	 * \todo Provide a unified \c begin() function
 	 */
 	int beginNTSC();
 
@@ -242,17 +264,17 @@ public:
 	void scroll(int x, int y, int w, int h, int dx, int dy, int col = 0);
 
 
-	void moveCursor(int column, int line);
+	void moveCursor(int destColumn, int destLine);
 
 
-	void setPrintWindow(int left, int top, int width, int height);
+	void setPrintWindow(int winLeftEdge, int winTopEdge, int width, int height);
 
 
 	void unsetPrintWindow() {
-		tww = tw;
-		twh = th;
-		twx = 0;
-		twy = 0;
+		textWindowWidthInCharColsX = textFontWidthX;
+		textWindowHeightInCharRowsY = textFontHeightY;
+		textWindowPosLeftEdgeX = 0;
+		textWindowPosTopEdgeY = 0;
 	}
 
 
@@ -263,12 +285,12 @@ public:
 
 
 	void setInk(int i) {
-		ink = i;
+		textWindowFontColor = i;
 	}
 
 
 	void setPaper(int p) {
-		paper = p;
+		textWindowBackgroundColor = p;
 	}
 
 
@@ -279,13 +301,13 @@ public:
 
 
 	void waitBeam() {
-		while ((*(volatile int *)&line) < ysize);
+		while ((*(volatile int *)&line) < _displayResolutionY);
 	}
 
 
 	void waitSync() {
-		while ((*(volatile int *)&line) >= ysize);
-		while ((*(volatile int *)&line) < ysize);
+		while ((*(volatile int *)&line) >= _displayResolutionY);
+		while ((*(volatile int *)&line) < _displayResolutionY);
 	}
 
 
@@ -295,9 +317,6 @@ public:
 	int pclock; // must divide 84000000
 
 
-	int xsize;
-
-
 	int xsyncstart;
 
 
@@ -305,9 +324,6 @@ public:
 
 
 	int xtotal;
-
-
-	int ysize;
 
 
 	int ysyncstart;
@@ -422,7 +438,7 @@ public:
 	 *
 	 * \brief Pixel buffer memory address
 	 */
-	uint16_t *pb;
+	uint16_t *monoPixelBufPtr;
 
 	/**
 	 * The amount of \e words (16-bit values) per output line.
@@ -431,7 +447,7 @@ public:
 	 *
 	 *  \brief Qty of \e words per line
 	 */
-	int pw;
+	int monoPixelWordsPerLine;
 
 	/**
 	 * The size of the pixel buffer.
@@ -439,22 +455,34 @@ public:
 	 *
 	 * \brief Total size of pixel buffer
 	 */
-	int pbsize;
+	int monoPixelBufferSizeInWords;
 
-	uint32_t *pbb;		// Pixel buffer bit-banding alias address (read the datasheet p75)
-	int pbw;			// Pixel buffer bit-banding stride (in 32-bit words)
+	/**
+	 * Pointer to the monochrome pixel buffer's bit-banding alias address.
+	 *
+	 * \note For technical details, see page 66-68 in the \b SAM3X8E datasheet
+	 */
+	uint32_t *monoPixelBufferBitBandingAliasAddrPtr;
 
-	// To help understand usage of these, look at the following functions:
+	/**
+	 * The monochrome pixel buffer's bit-banding \e stride (in 32-bit "double words")
+	 *
+	 * \note The value of this indicates the amount of pixels per line.
+	 * \todo Verify the accuracy of the note for this variable.
+	 */
+	int monoPixelBufferBitBandingStride;
+
+	/* To help understand usage of these, look at the following functions: */
 
 
 	void putPPixelFast(int x, int y, int c) {
-		pbb[y * pbw + (x ^ 15)] = c;
+		monoPixelBufferBitBandingAliasAddrPtr[y * monoPixelBufferBitBandingStride + (x ^ 15)] = c;
 	}
 
 
 
 	int getPPixelFast(int x, int y) {
-		return pbb[y * pbw + (x ^ 15)];
+		return monoPixelBufferBitBandingAliasAddrPtr[y * monoPixelBufferBitBandingStride + (x ^ 15)];
 	}
 
 
@@ -512,47 +540,106 @@ public:
 	 * @{
 	 */
 
-	int tx;				/*! The text cursor's position (X-axis / "column") */
-	int ty;				/*! The text cursor's position (Y-axis / "row") */
+	int textCursorPosColumnX;				/*! The text cursor's position (X-axis / "column") */
+	int textCursorPosRowY;				/*! The text cursor's position (Y-axis / "row") */
 
-	int tw;				/*! Text width (X-axis / "columns") */
-	int th;				/*! Text height (Y-axis / "rows") */
+	int textFontWidthX;				/*! Text width (X-axis / "columns") */
+	int textFontHeightY;				/*! Text height (Y-axis / "rows") */
 
-	int twx;			/*! The text window's position (X-axis / left edge of window) */
-	int twy;			/*! The text window's position (Y-axis / top edge of window) */
-	int tww;			/*! The text window's width in columns (1 column = 8 pixels) */
-	int twh;			/*! The text window's height in rows (1 row = 8 pixels) */
+	int textWindowPosLeftEdgeX;			/*! The text window's position (X-axis / left edge of window) */
+	int textWindowPosTopEdgeY;			/*! The text window's position (Y-axis / top edge of window) */
+	int textWindowWidthInCharColsX;			/*! The text window's width in columns (1 column = 8 pixels) */
+	int textWindowHeightInCharRowsY;			/*! The text window's height in rows (1 row = 8 pixels) */
 
-	int ink;			/*! The color of the text within the text window */
-	int paper;			/*! The color of the background of the text window */
+	int textWindowFontColor;			/*! The color of the text within the text window */
+	int textWindowBackgroundColor;			/*! The color of the background of the text window */
 
 	/**
 	 * @}
 	*/
 
+protected:
+
+	/**
+	 * The X-axis display resolution in pixels. Allowed values vary by video output mode.
+	 *
+	 * \brief The X-axis resolution
+	 */
+	int _displayResoultionX;
+
+
+	/**
+	 * The Y-axis display resolution in pixels. Allowed values vary by video output mode.
+	 *
+	 * \brief The Y-axis resolution
+	 */
+	int _displayResolutionY;
 
 private:
+	/**
+	 * This variable holds the operational state of the driver; this indicates whether the driver is currently running,
+	 * or if it is idle.
+	 *
+	 * \brief The operational state of the driver
+	 */
+	static uint8_t _isDriverRunning;
 
-	static uint8_t _isDriverRunning;		/*! The state of the driver; whether we are running or not */
-	static video_output_mode_t videoOutputMode;				/*! The current video output mode. */
+	/**
+	 * This variable holds the current video output mode which the driver is currently using to display video output.
+	 * The value is stored as a type of the enumeration \c video_output_mode_t -- allowing for relatively easy lookup or
+	 * comparison in code structures.
+	 *
+	 * \brief The current video output mode
+	 */
+	static video_output_mode_t _currentVideoOutputMode;
 
 
-	int calcmodeline();
-	int allocvideomem();
-	void freevideomem();
-	void startinterrupts();
-	void stopinterrupts();
+	/**
+	 * Attempt to calculate a valid modeline for video output.
+	 *
+	 * \return Indicates whether a modeline was able to be calculated for the given configuration.
+	 * \retval 0	The operation was successful.
+	 * \retval -1	The subroutine was unable to calculate a valid modeline.
+	 */
+	int calculateValidModeline();
+
+
+
+	int allocateVideoMemory();
+
+
+	void freeAllocatedVideoMemory();
+
+
+	void startVideoDriverInterrupts();
+
+
+	void stopVideoDriverInterrupts();
+
+
 	void startTimers();
+
+
 	void stopTimers();
+
+
 	void startVgaOutputMono();
+
+
 	void stopVgaOutputMono();
+
+
 	void startVgaOutputColor();
+
+
 	void stopVgaOutputColor();
+
+
 	void reconfigureDmaPriority();
 
 };
 
-extern Vga VGA;
+extern DueVideoOut VGA;
 
 
 #endif

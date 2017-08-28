@@ -5,16 +5,37 @@
  *
  * \warning Working on this file is NOT for the faint of heart.
  *
+ * \author		Gerad Munsch <gmunsch@unforgivendevelopment.com>
+ * \author		stimmer <stimmylove@gmail.com>
+ * \date		2013-2017
+ *
+ * \copyright \parblock
+ * This library is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General
+ * Public License as published by the Free Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with this library;
+ * if not, write to the
+ *   Free Software Foundation, Inc.
+ *   51 Franklin St
+ *   Fifth Floor
+ *   Boston, MA 02110-1301
+ *   USA
+ * \endparblock
  */
 
 
-#include "VGA.h"
+#include "DueVideoOut.h"
 #include "crpal.h"
 #include "crntsc.h"
 
 
 
-Vga VGA;
+DueVideoOut VGA;
 
 
 
@@ -38,7 +59,7 @@ void __attribute__((aligned(64))) TC4_Handler() {
 	}
 
 	if (disp == VGA_MONO) {
-		REG_DMAC_CTRLA4	= 0x12030000 + (VGA.pw >> 1);
+		REG_DMAC_CTRLA4	= 0x12030000 + (VGA.monoPixelWordsPerLine >> 1);
 		REG_DMAC_CHER	= 1 << 4;
 
 		asm volatile(".rept 10\n\t nop\n\t .endr\n\t");
@@ -46,7 +67,7 @@ void __attribute__((aligned(64))) TC4_Handler() {
 		REG_PIOA_PDR	= 1 << 26;
 	}
 
-	if (VGA.videoOutputMode == VGA_PAL) {
+	if (VGA._currentVideoOutputMode == VGA_PAL) {
 		int p;
 		static uint16_t *buf;
 
@@ -67,7 +88,7 @@ void __attribute__((aligned(64))) TC4_Handler() {
 			:"r0"
 		);
 
-		if (VGA.line < VGA.ysize) {
+		if (VGA.line < VGA._displayResolutionY) {
 			p = VGA.phase + 6;
 			if (p >= 30) {
 				p -= 30;
@@ -111,26 +132,26 @@ void __attribute__((aligned(64))) TC4_Handler() {
 				:"r0", "r1", "r2", "r3"
 			);
 
-		} else if ((VGA.line == VGA.ysize) || (VGA.line == VGA.ysize + 1)) {
-			uint32_t *lp = (uint32_t *)(buf + 96);
-			for (int i =0; i < 160; i++) {
-				*lp++ = 0x3c3c3c3c;
+		} else if ((VGA.line == VGA._displayResolutionY) || (VGA.line == VGA._displayResolutionY + 1)) {
+			uint32_t *lp = (uint32_t*)(buf + 96);
+			for (int i = 0; i < 160; i++) {
+				*lp++ = 0x3C3C3C3C;
 			}
 		} else if ((VGA.line == VGA.ysyncstart) || (VGA.line == VGA.ysyncstart + 1)) {
-			uint32_t *lp = (uint32_t *)buf;
+			uint32_t *lp = (uint32_t*)buf;
 			for (int i = 0; i < 16; i++) {
-				*lp++ = 0x3c3c3c3c;
+				*lp++ = 0x3C3C3C3C;
 			}
 			for (int i = 16; i < 223; i++) {
 				*lp++ = 0;
 			}
 		} else if ((VGA.line == VGA.ysyncend) || (VGA.line == VGA.ysyncend + 1)) {
-			uint32_t *lp = (uint32_t *)buf;
+			uint32_t *lp = (uint32_t*)buf;
 			for (int i = 0; i < 16; i++) {
 				*lp++ = 0;
 			}
 			for (int i = 16; i < 223; i++) {
-				*lp++ = 0x3c3c3c3c;
+				*lp++ = 0x3C3C3C3C;
 			}
 		}
 		VGA.phase += VGA.poff;
@@ -144,7 +165,7 @@ void __attribute__((aligned(64))) TC4_Handler() {
 		return;
 
 
-	} else if (VGA.videoOutputMode == VGA_NTSC) {
+	} else if (VGA._currentVideoOutputMode == VGA_NTSC) {
 		int p;
 		static uint16_t *buf;
 
@@ -152,7 +173,7 @@ void __attribute__((aligned(64))) TC4_Handler() {
 		REG_DMAC_CTRLA5	= 0x22060000 + 221;
 		REG_DMAC_CHER	= 1 << 5;
 
-		buf = (uint16_t *)(((int)VGA.dmabuf) + ((VGA.line & 1) * 1024));
+		buf = (uint16_t*)(((int)VGA.dmabuf) + ((VGA.line & 1) * 1024));
 
 		asm volatile(
 			".rept 18               \n\t"
@@ -164,7 +185,7 @@ void __attribute__((aligned(64))) TC4_Handler() {
 			:"r0"
 		);
 
-		if (VGA.line < VGA.ysize) {
+		if (VGA.line < VGA._displayResolutionY) {
 			p = VGA.phase + 88;
 
 			if (p >= 88) {
@@ -207,26 +228,26 @@ void __attribute__((aligned(64))) TC4_Handler() {
 				:"r0", "r1", "r2", "r3"
 			);
 
-		} else if ((VGA.line == VGA.ysize) || (VGA.line == VGA.ysize + 1)) {
-			uint32_t *lp = (uint32_t * )(buf + 88);
+		} else if ((VGA.line == VGA._displayResolutionY) || (VGA.line == VGA._displayResolutionY + 1)) {
+			uint32_t *lp = (uint32_t*)(buf + 88);
 			for (int i = 0; i < 160; i++) {
-				*lp++ = 0x3c3c3c3c;
+				*lp++ = 0x3C3C3C3C;
 			}
 		} else if ((VGA.line == VGA.ysyncstart) || (VGA.line == VGA.ysyncstart + 1)) {
-			uint32_t *lp = (uint32_t *) buf;
+			uint32_t *lp = (uint32_t*)buf;
 			for (int i = 0; i < 16; i++) {
-				*lp++ = 0x3c3c3c3c;
+				*lp++ = 0x3C3C3C3C;
 			}
 			for (int i = 16; i < 222; i++) {
 				*lp++ = 0;
 			}
 		} else if ((VGA.line == VGA.ysyncend) || (VGA.line == VGA.ysyncend + 1)) {
-			uint32_t *lp = (uint32_t *) buf;
+			uint32_t *lp = (uint32_t*)buf;
 			for (int i = 0; i < 16; i++) {
 				*lp++ = 0;
 			}
 			for (int i = 16; i < 222; i++) {
-				*lp++ = 0x3c3c3c3c;
+				*lp++ = 0x3C3C3C3C;
 			}
 		}
 
@@ -246,11 +267,11 @@ void __attribute__((aligned(64))) TC4_Handler() {
 	}
 
 	if (VGA.line == VGA.ysyncstart) {
-		_v_digitalWriteDirect(_v_vsync, VGA.vsyncpol);
+		_v_digitalWriteDirect(_video_output_vsync_pin, VGA.vsyncpol);
 	}
 
 	if (VGA.line == VGA.ysyncend) {
-		_v_digitalWriteDirect(_v_vsync, !VGA.vsyncpol);
+		_v_digitalWriteDirect(_video_output_vsync_pin, !VGA.vsyncpol);
 	}
 
 	VGA.linedouble++;
@@ -260,18 +281,18 @@ void __attribute__((aligned(64))) TC4_Handler() {
 		VGA.line++;
 	}
 
-	if (VGA.line == VGA.ysize) {
+	if (VGA.line == VGA._displayResolutionY) {
 		disp = NO_VIDEO_OUT;
 	}
 
 	if (VGA.line == VGA.ytotal) {
-		if (VGA.videoOutputMode == VGA_MONO) {
-			REG_DMAC_SADDR4 = (uint32_t) VGA.pb;
-		} else if (VGA.videoOutputMode == VGA_COLOR) {
-			REG_DMAC_SADDR5 = (uint32_t) VGA.cb;
+		if (VGA._currentVideoOutputMode == VGA_MONO) {
+			REG_DMAC_SADDR4 = (uint32_t)VGA.monoPixelBufPtr;
+		} else if (VGA._currentVideoOutputMode == VGA_COLOR) {
+			REG_DMAC_SADDR5 = (uint32_t)VGA.cb;
 		}
 		VGA.line = 0;
-		disp = VGA.videoOutputMode;
+		disp = VGA._currentVideoOutputMode;
 		VGA.framecount++;
 	}
 
@@ -282,8 +303,8 @@ void __attribute__((aligned(64))) PWM_Handler() {
 	long t = (REG_PWM_ISR1);
 
 	if (VGA.linedouble) {
-		if (VGA.videoOutputMode == VGA_MONO) {
-			REG_DMAC_SADDR4 -= (VGA.pw << 1);
+		if (VGA._currentVideoOutputMode == VGA_MONO) {
+			REG_DMAC_SADDR4 -= (VGA.monoPixelWordsPerLine << 1);
 		} else {
 			REG_DMAC_SADDR5 -= (VGA.cw);
 		}
@@ -299,7 +320,7 @@ void __attribute__((aligned(64))) DMAC_Handler() {
 }
 
 
-int Vga::calcmodeline() {
+int DueVideoOut::calculateValidModeline() {
 	//try to find a suitable modeline
 	for (xscale = 16; xscale > 1; xscale--) {
 		for (int yti = 0; yti < 50; yti++) {
@@ -309,24 +330,24 @@ int Vga::calcmodeline() {
 
 
 			/* ---( Calculate X-axis parameters )--- */
-			xtotal = (xsize * 5 / 4);
+			xtotal = (_displayResoultionX * 5 / 4);
 
 			if (xtotal & 1) {
 				xtotal -= 1;
 			}
 
-			xsyncstart = ((10 * xsize + 2 * xtotal) / 12);
-			xsyncend   = ((5  * xsize + 7 * xtotal) / 12);
+			xsyncstart	= ((10 * _displayResoultionX + 2 * xtotal) / 12);
+			xsyncend	= ((5  * _displayResoultionX + 7 * xtotal) / 12);
 
 
 			/* ---( Calculate Y-axis parameters )--- */
-			ytotal = ((ysize * 25) / 24) + yti;
+			ytotal = ((_displayResolutionY * 25) / 24) + yti;
 
-			ysyncstart = ((10 * ysize + 2 * ytotal) / 12) + 1;
-			ysyncend   = ((8  * ysize + 4 * ytotal) / 12) + 1;
+			ysyncstart	= ((10 * _displayResolutionY + 2 * ytotal) / 12) + 1;
+			ysyncend	= ((8  * _displayResolutionY + 4 * ytotal) / 12) + 1;
 
-			if (ysyncstart <= ysize) {
-				ysyncstart = ysize + 1;
+			if (ysyncstart <= _displayResolutionY) {
+				ysyncstart = _displayResolutionY + 1;
 			}
 
 			if (ysyncend <= ysyncstart) {
@@ -337,7 +358,7 @@ int Vga::calcmodeline() {
 
 			for (yscale = 1; yscale <= 8; yscale++) {
 				ffreq	= lfreq / (ytotal * yscale);
-				ltot	= ysize * yscale;
+				ltot	= _displayResolutionY * yscale;
 
 				if ((lfreq > lfreqmin) && (lfreq < lfreqmax) && (ffreq > ffreqmin) && (ffreq < ffreqmax)) {
 					goto foundmode;
@@ -350,7 +371,7 @@ int Vga::calcmodeline() {
 	foundmode:;
 
 	/* ---( Check 'xscale' value for sanity / legality )--- */
-	if ((xscale == 1) || (videoOutputMode == VGA_COLOR && xscale < 6)) {
+	if ((xscale == 1) || (_currentVideoOutputMode == VGA_COLOR && xscale < 6)) {
 		/**
 		 * A value of \b 1 for \p xscale is \e always illegal. When \p _videoOutputMode is \p VGA_COLOR and \p xscale
 		 * is \b 5 or less, an illegal situation occurs, as well.
@@ -361,8 +382,8 @@ int Vga::calcmodeline() {
 	}
 
 	/* calculate timings from modeline data */
-	xclocks = (xtotal * xscale) & ~1;
-	xstart  = (xtotal - xsyncend) * xscale - 78;
+	xclocks	= (xtotal * xscale) & ~1;
+	xstart	= (xtotal - xsyncend) * xscale - 78;
 
 
 	if (xstart < 132) {
@@ -376,32 +397,26 @@ int Vga::calcmodeline() {
 }
 
 
-int Vga::allocvideomem() {
-	if (videoOutputMode == VGA_MONO) {
+int DueVideoOut::allocateVideoMemory() {
+	/* ---( VGA - monochrome _currentVideoOutputMode )--- */
+	if (_currentVideoOutputMode == VGA_MONO) {
+		monoPixelWordsPerLine = ((_displayResoultionX + 31) / 32) * 2 + 2;
+		monoPixelBufferSizeInWords = monoPixelWordsPerLine * _displayResolutionY;
+		monoPixelBufPtr = (uint16_t*)calloc(monoPixelBufferSizeInWords, 2);
 
-		pw = ((xsize + 31) / 32) * 2 + 2;
-
-		pbsize = pw * ysize;
-
-		pb = (uint16_t *)calloc(pbsize, 2);
-
-		if (pb == 0) {
+		if (monoPixelBufPtr == 0) {
 			return -2;
 		}
 
-		pbb = (uint32_t *)((int(pb - 0x20000000) * 32) + 0x22000000);
-
-		pbw = pw * 16;
+		monoPixelBufferBitBandingAliasAddrPtr = (uint32_t*)((int(monoPixelBufPtr - 0x20000000) * 32) + 0x22000000);
+		monoPixelBufferBitBandingStride = monoPixelWordsPerLine * 16;
 	}
 
-	/* ---( VGA - color videoOutputMode )--- */
-	if ((videoOutputMode & VGA_COLOR)) {
-
-		cw = xsize;
-
-		cbsize = cw * ysize;
-
-		cb = (uint8_t *)calloc(cbsize, 1);
+	/* ---( VGA - color _currentVideoOutputMode )--- */
+	if ((_currentVideoOutputMode & VGA_COLOR)) {
+		cw = _displayResoultionX;
+		cbsize = cw * _displayResolutionY;
+		cb = (uint8_t*)calloc(cbsize, 1);
 
 		if (cb == 0) {
 			return -2;
@@ -412,11 +427,14 @@ int Vga::allocvideomem() {
 }
 
 
-void Vga::freevideomem() {
-	if (pb) {
-		free(pb);
-		pb = 0;
+void DueVideoOut::freeAllocatedVideoMemory() {
+	/* Free pixel buffer (used by monochrome mode) */
+	if (monoPixelBufPtr) {
+		free(monoPixelBufPtr);
+		monoPixelBufPtr = 0;
 	}
+
+	/* Free chroma buffer (used by color mode) */
 	if (cb) {
 		free(cb);
 		cb = 0;
@@ -424,7 +442,7 @@ void Vga::freevideomem() {
 }
 
 
-void Vga::startinterrupts() {
+void DueVideoOut::startVideoDriverInterrupts() {
 	/* Set NVIC interrupt priority to 6 for numbered interrupts 0 - 44 */
 	for (int i = 0; i < 45; i++) {
 		NVIC_SetPriority(IRQn_Type(i), 6);
@@ -436,7 +454,7 @@ void Vga::startinterrupts() {
 	NVIC_SetPriority(TC4_IRQn, 1);		/* Set NVIC interrupt priority to 1 for the TC4 (timer/counter 4) module */
 	NVIC_SetPriority(UOTGHS_IRQn, 2);	/* Set NVIC interrupt priority to 2 for */
 
-	if (videoOutputMode == VGA_MONO) {
+	if (_currentVideoOutputMode == VGA_MONO) {
 		NVIC_EnableIRQ(DMAC_IRQn);
 	}
 
@@ -445,50 +463,50 @@ void Vga::startinterrupts() {
 }
 
 
-void Vga::stopinterrupts() {
+void DueVideoOut::stopVideoDriverInterrupts() {
 	NVIC_DisableIRQ(PWM_IRQn);
 	NVIC_DisableIRQ(TC4_IRQn);
 	NVIC_DisableIRQ(DMAC_IRQn);
 }
 
 
-void Vga::startTimers() {
+void DueVideoOut::startTimers() {
 	REG_PIOA_PDR   = 1 << 20;
 	REG_PIOA_ABSR |= 1 << 20;
-	REG_PMC_PCER1  = 1 << 4;
-	REG_PWM_WPCR   = 0x50574dfc;
-	REG_PWM_CLK    = 0x00010001;
-	REG_PWM_DIS    = 1 << 2;
-	REG_PWM_CMR2   = hsyncpol ? 0x0 : 0x200;
-	REG_PWM_CPRD2  = xclocks + 1;
-	REG_PWM_CDTY2  = xclocks - xsyncwidth;
-	REG_PWM_SCM    = 0;
-	REG_PWM_IER1   = 1 << 2;
-	REG_PWM_ENA    = 1 << 2;
 
-	REG_PMC_PCER0  = 1 << 31;
-	REG_TC1_WPMR   = 0x54494D00;
-	REG_TC1_CMR1   = 0b00000000000010011100010000000000;
-	REG_TC1_RC1    = xclocks / 2;
-	REG_TC1_RA1    = 0;
-	REG_TC1_CCR1   = 0b101;
-	REG_TC1_IER1   = 0b00010000;
-	REG_TC1_IDR1   = 0b11101111;
+	REG_PMC_PCER1	= 1 << 4;
+	REG_PWM_WPCR	= 0x50574dfc;
+	REG_PWM_CLK		= 0x00010001;
+	REG_PWM_DIS		= 1 << 2;
+	REG_PWM_CMR2	= hsyncpol ? 0x0 : 0x200;
+	REG_PWM_CPRD2	= xclocks + 1;
+	REG_PWM_CDTY2	= xclocks - xsyncwidth;
+	REG_PWM_SCM		= 0;
+	REG_PWM_IER1	= 1 << 2;
+	REG_PWM_ENA		= 1 << 2;
+
+	REG_PMC_PCER0	= 1 << 31;
+	REG_TC1_WPMR	= 0x54494D00;
+	REG_TC1_CMR1	= 0b00000000000010011100010000000000;
+	REG_TC1_RC1		= xclocks / 2;
+	REG_TC1_RA1		= 0;
+	REG_TC1_CCR1	= 0b101;
+	REG_TC1_IER1	= 0b00010000;
+	REG_TC1_IDR1	= 0b11101111;
 }
 
 
-void Vga::stopTimers() {
-	REG_TC1_CCR1  = 0b10;
-	REG_TC1_IDR1  = 0b00010000;
-	REG_PMC_PCDR0 = 1 << 28;
+void DueVideoOut::stopTimers() {
+	REG_TC1_CCR1	= 0b10;
+	REG_TC1_IDR1	= 0b00010000;
+	REG_PMC_PCDR0	= 1 << 28;
 
-	REG_PWM_DIS   = 1 << 2;
-	REG_PWM_IDR1  = 1 << 2;
+	REG_PWM_DIS		= 1 << 2;
+	REG_PWM_IDR1	= 1 << 2;
 }
 
 
-void Vga::startVgaOutputMono() {
-
+void DueVideoOut::startVgaOutputMono() {
 	for (int i = 34; i <= 41; i++) {
 		pinMode(i, INPUT);
 	}
@@ -498,7 +516,7 @@ void Vga::startVgaOutputMono() {
 	REG_DMAC_EN      = 1;
 	REG_DMAC_GCFG    = 0x00;
 	REG_DMAC_EBCIER  = 1 << 4;
-	REG_DMAC_SADDR4  = (uint32_t) VGA.pb;
+	REG_DMAC_SADDR4  = (uint32_t) VGA.monoPixelBufPtr;
 	REG_DMAC_DADDR4  = (uint32_t) &REG_SPI0_TDR;
 	REG_DMAC_DSCR4   = 0;
 	REG_DMAC_CTRLB4  = 0x20310000;
@@ -516,7 +534,7 @@ void Vga::startVgaOutputMono() {
 }
 
 
-void Vga::stopVgaOutputMono() {
+void DueVideoOut::stopVgaOutputMono() {
 	REG_DMAC_CHDR   = 1 << 4;
 
 	//while(REG_DMAC_CHSR&(1<<4));
@@ -526,14 +544,13 @@ void Vga::stopVgaOutputMono() {
 }
 
 
-void Vga::startVgaOutputColor() {
-
+void DueVideoOut::startVgaOutputColor() {
 	REG_PMC_PCER1 = 1 << 7;
 	REG_DMAC_WPMR = DMAC_WPMR_WPKEY(0x444d4143);
 	REG_DMAC_EN = 1;
 	REG_DMAC_GCFG = 0x00;
-	REG_DMAC_SADDR5 = (uint32_t) VGA.cb;
-	REG_DMAC_DADDR5 = (uint32_t) 0x60000000;
+	REG_DMAC_SADDR5 = (uint32_t)VGA.cb;
+	REG_DMAC_DADDR5 = (uint32_t)0x60000000;
 	REG_DMAC_DSCR5 = 0;
 	REG_DMAC_CTRLB5 = 0x20000000;
 	REG_DMAC_CFG5 = 0x10012200;
@@ -551,45 +568,47 @@ void Vga::startVgaOutputColor() {
 }
 
 
-void Vga::stopVgaOutputColor() {
+void DueVideoOut::stopVgaOutputColor() {
 	REG_PMC_PCDR0 = 1 << 9;
-
 }
 
 
-void Vga::reconfigureDmaPriority() {
+void DueVideoOut::reconfigureDmaPriority() {
 	// this code puts DMA priority above CPU.
-	MATRIX->MATRIX_WPMR = 0x4d415400;
+	MATRIX->MATRIX_WPMR = 0x4D415400;
+
 	for (int i = 0; i < 6; i++) {
 		MATRIX->MATRIX_MCFG[i] = 1;
 	}
+
 	MATRIX->MATRIX_MCFG[4] = 0;
 	for (int i = 0; i < 8; i++) {
 		MATRIX->MATRIX_SCFG[i] = 0x01000008;
 	}
-	MATRIX->MATRIX_SCFG[6] = 0x011200ff;
-	MATRIX->MATRIX_PRAS0 = 0x00020100;
-	MATRIX->MATRIX_PRAS1 = 0x00020100;
-	MATRIX->MATRIX_PRAS2 = 0x00000000;
-	MATRIX->MATRIX_PRAS3 = 0x00000003;
-	MATRIX->MATRIX_PRAS4 = 0x00000000;
-	MATRIX->MATRIX_PRAS5 = 0x00000000;
-	MATRIX->MATRIX_PRAS6 = 0x00030000;
-	MATRIX->MATRIX_PRAS7 = 0x00030000;
-	MATRIX->MATRIX_PRAS8 = 0x00000100;
+
+	MATRIX->MATRIX_SCFG[6]	= 0x011200FF;
+	MATRIX->MATRIX_PRAS0	= 0x00020100;
+	MATRIX->MATRIX_PRAS1	= 0x00020100;
+	MATRIX->MATRIX_PRAS2	= 0x00000000;
+	MATRIX->MATRIX_PRAS3	= 0x00000003;
+	MATRIX->MATRIX_PRAS4	= 0x00000000;
+	MATRIX->MATRIX_PRAS5	= 0x00000000;
+	MATRIX->MATRIX_PRAS6	= 0x00030000;
+	MATRIX->MATRIX_PRAS7	= 0x00030000;
+	MATRIX->MATRIX_PRAS8	= 0x00000100;
 }
 
 
-int Vga::begin(int x, int y, video_output_mode_t m) {
+int DueVideoOut::begin(int targetResX, int targetResY, video_output_mode_t targetVideoMode) {
 	if (_isDriverRunning) {
 		VGA.end();
 	}
 
-	if (m != VGA_MONO && m != VGA_COLOR) {
+	if (targetVideoMode != VGA_MONO && targetVideoMode != VGA_COLOR) {
 		return -4;
 	}
 
-	if (m == VGA_COLOR && y > 380) {
+	if (targetVideoMode == VGA_COLOR && targetResY > 380) {
 		return -3;
 	}
 
@@ -600,19 +619,19 @@ int Vga::begin(int x, int y, video_output_mode_t m) {
 		ffreqmax = 70;
 	}
 
-	xsize = x;
-	ysize = y;
-	videoOutputMode  = m;
+	_displayResoultionX = targetResX;
+	_displayResolutionY = targetResY;
+	_currentVideoOutputMode  = targetVideoMode;
 
-	tww = tw = xsize / 8;
-	twh = th = ysize / 8;
+	textWindowWidthInCharColsX = textFontWidthX = _displayResoultionX / 8;
+	textWindowHeightInCharRowsY = textFontHeightY = _displayResolutionY / 8;
 
-	twx   = 0;
-	twy   = 0;
-	tx    = 0;
-	ty    = 0;
-	ink   = 255;
-	paper = 0;
+	textWindowPosLeftEdgeX   = 0;
+	textWindowPosTopEdgeY   = 0;
+	textCursorPosColumnX    = 0;
+	textCursorPosRowY    = 0;
+	textWindowFontColor   = 255;
+	textWindowBackgroundColor = 0;
 
 	synced     = 0;
 	framecount = 0;
@@ -621,36 +640,36 @@ int Vga::begin(int x, int y, video_output_mode_t m) {
 
 	int retVal;		/* Holds the return value from the mode line calculation and video memory allocation functions */
 
-	retVal = calcmodeline();
+	retVal = calculateValidModeline();
 	if (retVal) {
 		return retVal;
 	}
 
-	retVal = allocvideomem();
+	retVal = allocateVideoMemory();
 	if (retVal) {
 		return retVal;
 	}
 
 	reconfigureDmaPriority();
 
-	/* Set the HSYNC and VSYNC pins to OUTPUT videoOutputMode */
-	pinMode(_v_hsync, OUTPUT);
-	pinMode(_v_vsync, OUTPUT);
+	/* Set the HSYNC and VSYNC pins to OUTPUT _currentVideoOutputMode */
+	pinMode(_video_output_hsync_pin, OUTPUT);
+	pinMode(_video_output_vsync_pin, OUTPUT);
 
 	/* Start the timers used by the driver */
 	startTimers();
 
-	/* Start the video output in the appropriate chromatic videoOutputMode */
-	if (videoOutputMode == VGA_MONO) {
-		/* Start the video output in monochrome videoOutputMode */
+	/* Start the video output in the appropriate chromatic _currentVideoOutputMode */
+	if (_currentVideoOutputMode == VGA_MONO) {
+		/* Start the video output in monochrome _currentVideoOutputMode */
 		startVgaOutputMono();
-	} else if (videoOutputMode == VGA_COLOR) {
-		/* Start the video output in color videoOutputMode */
+	} else if (_currentVideoOutputMode == VGA_COLOR) {
+		/* Start the video output in color _currentVideoOutputMode */
 		startVgaOutputColor();
 	}
 
 	/* Start the interrupts used by the driver */
-	startinterrupts();
+	startVideoDriverInterrupts();
 
 	/* Store the state of the driver, and return successfully */
 	_isDriverRunning = 1;
@@ -658,25 +677,25 @@ int Vga::begin(int x, int y, video_output_mode_t m) {
 }
 
 
-int Vga::beginPAL()  {
-	videoOutputMode = COMPOSITE_PAL;
+int DueVideoOut::beginPAL()  {
+	_currentVideoOutputMode = COMPOSITE_PAL;
 
 	/* Composite PAL video has a static screen geometry of 320x240 */
-	xsize = 320;
-	ysize = 240;
+	_displayResoultionX = 320;
+	_displayResolutionY = 240;
 
 
 	/* Given screen geometry, the maximum dimensions of a text window are 40x30 characters */
-	tww = 40;
-	twh = 30;
+	textWindowWidthInCharColsX = 40;
+	textWindowHeightInCharRowsY = 30;
 
-	twx = 0;
-	twy = 0;
-	tx  = 0;
-	ty  = 0;
+	textWindowPosLeftEdgeX = 0;
+	textWindowPosTopEdgeY = 0;
+	textCursorPosColumnX  = 0;
+	textCursorPosRowY  = 0;
 
-	ink = 255;
-	paper = 0;
+	textWindowFontColor = 255;
+	textWindowBackgroundColor = 0;
 
 	synced = 0;
 	framecount = 0;
@@ -706,23 +725,23 @@ int Vga::beginPAL()  {
 	poff  = 28;
 
 	int r;
-	dmabuf = (uint16_t *)malloc(2048);
+	dmabuf = (uint16_t*)malloc(2048);
 
-	crt[0] = (const uint16_t *)cretab;
-	crt[1] = (const uint16_t *)crotab;
+	crt[0] = (const uint16_t*)cretab;
+	crt[1] = (const uint16_t*)crotab;
 	cbt[0] = cbetab;
 	cbt[1] = cbotab;
 
-	r = allocvideomem();
+	r = allocateVideoMemory();
 
 	if (r) {
 		return r;
 	}
 
 
-	/* Set the HSYNC and VSYNC pins to OUTPUT videoOutputMode */
-	pinMode(_v_hsync, OUTPUT);
-	pinMode(_v_vsync, OUTPUT);
+	/* Set the HSYNC and VSYNC pins to OUTPUT _currentVideoOutputMode */
+	pinMode(_video_output_hsync_pin, OUTPUT);
+	pinMode(_video_output_vsync_pin, OUTPUT);
 
 	startTimers();
 
@@ -748,31 +767,31 @@ int Vga::beginPAL()  {
 	REG_SMC_TIMINGS0 = 0;
 	REG_SMC_MODE0 = 0x00000000;
 
-	startinterrupts();
+	startVideoDriverInterrupts();
 	_isDriverRunning = 1;
 	return 0;
 
 }
 
 
-int Vga::beginNTSC() {
-	videoOutputMode = COMPOSITE_NTSC;
+int DueVideoOut::beginNTSC() {
+	_currentVideoOutputMode = COMPOSITE_NTSC;
 
-	/* NTSC videoOutputMode uses a static screen geometry of 320x200 */
-	xsize = 320;
-	ysize = 200;
+	/* NTSC _currentVideoOutputMode uses a static screen geometry of 320x200 */
+	_displayResoultionX = 320;
+	_displayResolutionY = 200;
 
 
-	tww = 40;	/* The maximum text window width in NTSC videoOutputMode is 40 */
-	twh = 25;	/* The maximum text window height in NTSC videoOutputMode is 25 */
+	textWindowWidthInCharColsX = 40;	/* The maximum text window width in NTSC _currentVideoOutputMode is 40 */
+	textWindowHeightInCharRowsY = 25;	/* The maximum text window height in NTSC _currentVideoOutputMode is 25 */
 
-	twx = 0;
-	twy = 0;
-	tx  = 0;
-	ty  = 0;
+	textWindowPosLeftEdgeX = 0;
+	textWindowPosTopEdgeY = 0;
+	textCursorPosColumnX  = 0;
+	textCursorPosRowY  = 0;
 
-	ink = 255;
-	paper = 0;
+	textWindowFontColor = 255;
+	textWindowBackgroundColor = 0;
 
 	synced = 0;
 	framecount = 0;
@@ -804,14 +823,14 @@ int Vga::beginNTSC() {
 	cbt[0] = cbtab;
 
 
-	r = allocvideomem();
+	r = allocateVideoMemory();
 
 	if (r) {
 		return r;
 	}
 
-	pinMode(_v_hsync, OUTPUT);
-	pinMode(_v_vsync, OUTPUT);
+	pinMode(_video_output_hsync_pin, OUTPUT);
+	pinMode(_video_output_vsync_pin, OUTPUT);
 
 	startTimers();
 
@@ -837,7 +856,7 @@ int Vga::beginNTSC() {
 	REG_SMC_TIMINGS0 = 0;
 	REG_SMC_MODE0    = 0x00000000;
 
-	startinterrupts();
+	startVideoDriverInterrupts();
 
 	_isDriverRunning = 1;
 
@@ -845,7 +864,7 @@ int Vga::beginNTSC() {
 }
 
 
-void Vga::end() {
+void DueVideoOut::end() {
 	/* Ensure the driver is actually running before we try to stop it... */
 	if (!_isDriverRunning) {
 		/* If the driver isn't running, we can return from the function immediately */
@@ -854,38 +873,38 @@ void Vga::end() {
 
 	_isDriverRunning = 0;	/* Set the driver's state to stopped */
 
-	stopinterrupts();
+	stopVideoDriverInterrupts();
 
-	if (videoOutputMode == VGA_MONO) {
+	if (_currentVideoOutputMode == VGA_MONO) {
 		stopVgaOutputMono();
-	} else if (videoOutputMode & VGA_COLOR) {
+	} else if (_currentVideoOutputMode & VGA_COLOR) {
 		stopVgaOutputColor();
 	}
 
 	stopTimers();
 
-	/* Restore the HSYNC and VSYNC pins to a safe default videoOutputMode ('INPUT' videoOutputMode is generally Hi-Z) */
-	pinMode(_v_hsync, INPUT);
-	pinMode(_v_vsync, INPUT);
+	/* Restore the HSYNC and VSYNC pins to a safe default _currentVideoOutputMode ('INPUT' _currentVideoOutputMode is generally Hi-Z) */
+	pinMode(_video_output_hsync_pin, INPUT);
+	pinMode(_video_output_vsync_pin, INPUT);
 
 	/* ---( Free video memory and other resources )--- */
-	freevideomem();
+	freeAllocatedVideoMemory();
 
-	if ((videoOutputMode == VGA_NTSC) || (videoOutputMode == VGA_PAL)) {
+	if ((_currentVideoOutputMode == VGA_NTSC) || (_currentVideoOutputMode == VGA_PAL)) {
 		free(dmabuf);
 	}
 
 	pclock     = 0;
-	xsize      = 0;
+	_displayResoultionX      = 0;
 	xsyncstart = 0;
 	xsyncend   = 0;
 	xtotal     = 0;
-	ysize      = 0;
+	_displayResolutionY      = 0;
 	ysyncstart = 0;
 	ysyncend   = 0;
 	ytotal     = 0;
 
-	videoOutputMode = NO_VIDEO_OUT;
+	_currentVideoOutputMode = NO_VIDEO_OUT;
 
 
 	line       = 0;

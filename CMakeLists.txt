@@ -11,12 +11,12 @@ project(${PROJECT_NAME})
 set(CMAKE_CXX_STANDARD 11)
 
 set(SOURCE_FILES
-        src/crntsc.h
-        src/crpal.h
-        src/font8x8.cpp
-        src/graphics.cpp
-        src/text.cpp
-        src/VGA.cpp
-        src/VGA.h)
+    src/crntsc.h
+    src/crpal.h
+    src/font8x8.cpp
+    src/graphics.cpp
+    src/text.cpp
+    src/DueVideoOut.cpp
+    src/DueVideoOut.h)
 
 add_executable(DueVGA ${SOURCE_FILES})
